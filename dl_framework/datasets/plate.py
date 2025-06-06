@@ -66,8 +66,7 @@ class PlateDataset(BaseDataset):
     def _load_data(self) -> None:
         """加载数据"""
         # 获取盘子数据的根目录
-        plate_dir = os.path.join(self.data_dir, self.config.get('data_name', 'plate'))
-        
+        plate_dir = self.config.get('data_dir', 'data/plate')
         if not os.path.exists(plate_dir):
             raise FileNotFoundError(f"盘子数据集目录不存在: {plate_dir}")
         

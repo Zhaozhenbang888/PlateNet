@@ -38,6 +38,7 @@ class ImageViT(BaseModel):
                 - num_classes: 类别数，若为0则不使用分类头
                 - return_features: 是否返回特征，默认为True
                 - dropout_rate: Dropout率，默认为0.0
+                - freeze_backbone: 是否冻结主干网络，默认为False
         """
         super(ImageViT, self).__init__(config)
         
@@ -49,6 +50,7 @@ class ImageViT(BaseModel):
         self.num_classes = config.get('num_classes', 2)  # 0表示不使用分类头
         self.return_features = config.get('return_features', False)
         self.dropout_rate = config.get('dropout_rate', 0.0)
+        self.freeze_backbone = config.get('freeze_backbone', False)
         
         # 创建Vision Transformer模型
         self.model = timm.create_model(
@@ -68,7 +70,31 @@ class ImageViT(BaseModel):
             self.embed_dim = self.model.num_features
 
         if self.num_classes > 0:
-          self.model.head = nn.Linear(self.embed_dim, self.num_classes)     
+            self.model.head = nn.Linear(self.embed_dim, self.num_classes)
+        
+        # 如果启用了冻结主干网络，则冻结除分类头以外的所有参数
+        if self.freeze_backbone:
+            self._freeze_backbone()
+            
+    def _freeze_backbone(self):
+        """冻结模型的主干网络，只保留分类头可训练"""
+        
+        # 冻结所有参数
+        for param in self.model.parameters():
+            param.requires_grad = False
+            
+        # 如果有分类头，解冻分类头的参数
+        if self.num_classes > 0 and hasattr(self.model, 'head'):
+            for param in self.model.head.parameters():
+                param.requires_grad = True
+                
+    def is_backbone_frozen(self):
+        """检查主干网络是否已被冻结"""
+        # 检查第一层参数是否被冻结
+        for name, param in self.model.named_parameters():
+            if 'head' not in name:  # 不是分类头
+                return not param.requires_grad
+        return False
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """前向传播

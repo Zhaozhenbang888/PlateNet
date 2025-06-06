@@ -1,6 +1,7 @@
 model:
   type: "image_vit"
   model_name: "vit_base_patch16_224"  # ViT模型名称
+  freeze_backbone: true  # 设置为true以冻结主干网络
   pretrained: true                    # 使用预训练权重
   in_chans: 3                         # 图像数据通常是三通道RGB
   img_size: [224, 224]                # 标准图像尺寸
@@ -12,3 +13,4 @@ model:
     reduction: "mean"
     label_smoothing: 0.1
     weight: 1.0
+    

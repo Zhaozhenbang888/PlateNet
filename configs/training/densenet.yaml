@@ -1,32 +1,35 @@
-# Vision Transformer 训练示例配置
+# 猫狗分类训练配置
 experiment_name: "plate_densenet"  # 实验名称
-model_config: "configs/models/densenet.yaml"  # 模型配置 
+model_config: "configs/models/densenet.yaml" # 模型配置
 dataset_config: "configs/datasets/plate.yaml"  # 数据集配置
 
-# 训练配置
+seed: 42
+device: "cuda"
+
+# 训练设置
 training:
-  epochs: 50
-  val_interval: 1  # 验证频率：每N个epoch验证一次，默认为1（每个epoch都验证）
-  overfit_on_small_subset: 
-    enable: false
-    small_subset_size: 100
+  epochs: 100
+  # early_stopping:
+  #   patience: 15  # 如果连续15个epoch没有改善，则停止训练
+  #   monitor: "val_loss"
+  save_best: true
+  save_interval: 5  # 每5个epoch保存一次
   optimizer:
-    type: "adamw"
-    lr: 1e-5
-    weight_decay: 1e-5
-  scheduler:
-    type: CompositeLR
-    step_frequency: epoch
-    phases:
-      # 预热阶段
-      - scheduler_name: LinearWarmup
-        config:
-          warmup_epochs: 5
-          warmup_start_factor: 0.01
-        duration: 5
-      
-  # checkpoint:
-  #   save_frequency: 5  # 每5个epoch保存一次权重
+    type: "adam"
+    lr: 0.00001
+    weight_decay: 0.0005  # L2正则化
+  checkpoint:
+    save_frequency: 5  # 每5个epoch保存一次权重
+  # scheduler:
+  #   type: "ReduceLROnPlateau"
+  #   mode: "min"         # 监控val_loss
+  #   factor: 0.5        # 学习率降低的因子
+  #   patience: 5        # 在降低学习率之前等待的epoch数
+  #   min_lr: 0.00001    # 最小学习率
+# 可视化设置
+visualizer:
+  type: "tensorboard"
+  log_interval: 10
 
 # 钩子配置
 hooks:
@@ -37,14 +40,14 @@ hooks:
 evaluation:
   val_evaluator:
     - type: Accuracy
-      top_k: [1]  # 计算top-1准确率
+      top_k: [1, 5]  # 计算top-1和top-5准确率
       prefix: "acc"
     - type: Precision
-      average: "binary"  # 宏平均，适合多分类任务
+      average: "macro"  # 宏平均，适合多分类任务
       prefix: "precision"
     - type: Recall
-      average: "binary"  # 宏平均，适合多分类任务
+      average: "macro"  # 宏平均，适合多分类任务
       prefix: "recall"
     - type: F1Score
-      average: "binary"  # 宏平均，适合多分类任务
+      average: "macro"  # 宏平均，适合多分类任务
       prefix: "f1"
