@@ -20,8 +20,9 @@ dataset:
 # │   ├── clean_dish/
 # │   └── dirty_dish/
 # └── test/
-#     ├── clean_dish/
-#     └── dirty_dish/
+#     ├── image1.jpg      
+#     ├── image2.jpg      
+#     └── ...
 #
 # 当 use_split_folders: false 或未设置时，使用原有结构：
 # data/plate/

@@ -89,10 +89,15 @@ class PlateDataset(BaseDataset):
             raise ValueError(f"没有找到{mode}数据。请确保数据目录结构正确。")
         
         # 打印数据集信息
-        self.logger.info(f"{'训练' if self.is_training else '测试'}集加载完成: "
-              f"总共 {len(self.image_paths)} 张图片, "
-              f"干净盘子: {self.labels.count(0)}, "
-              f"脏盘子: {self.labels.count(1)}")
+        if self.is_training or -1 not in self.labels:
+            # 训练集或有标签的测试集
+            self.logger.info(f"{'训练' if self.is_training else '测试'}集加载完成: "
+                  f"总共 {len(self.image_paths)} 张图片, "
+                  f"干净盘子: {self.labels.count(0)}, "
+                  f"脏盘子: {self.labels.count(1)}")
+        else:
+            # 无标签的测试集
+            self.logger.info(f"测试集加载完成: 总共 {len(self.image_paths)} 张图片（无标签）")
     
     def _load_data_from_split_folders(self, plate_dir: str) -> None:
         """从分割文件夹结构加载数据 (train/val/test)
@@ -117,6 +122,23 @@ class PlateDataset(BaseDataset):
         if not os.path.exists(split_dir):
             raise FileNotFoundError(f"分割文件夹不存在: {split_dir}")
         
+        # 如果是测试集，直接读取test文件夹下的所有图像文件（不需要分类子文件夹）
+        if not self.is_training and split_folder == 'test':
+            # 直接读取test文件夹下的所有图像文件
+            all_images = []
+            for fname in os.listdir(split_dir):
+                if fname.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    all_images.append(os.path.join(split_dir, fname))
+            
+            all_images.sort()
+            self.image_paths.extend(all_images)
+            # 测试集不需要真实标签，使用占位符标签（-1表示未知）
+            self.labels.extend([-1] * len(all_images))
+            
+            self.logger.info(f"从 {split_folder} 文件夹直接加载所有图像文件")
+            return
+        
+        # 训练集或验证集：按照分类子文件夹加载
         # 加载干净盘子图像
         clean_dir = os.path.join(split_dir, 'clean_dish')
         if os.path.exists(clean_dir):
@@ -199,7 +221,7 @@ class PlateDataset(BaseDataset):
             idx: 索引
             
         Returns:
-            (图像, 标签) 的元组
+            (图像, 标签) 的元组，测试集无标签时标签为-1
         """
         # 读取图像
         img_path = self.image_paths[idx]
@@ -214,7 +236,7 @@ class PlateDataset(BaseDataset):
         if self.transform:
             image = self.transform(image)
         
-        # 获取标签
+        # 获取标签（测试集无标签时为-1）
         label = self.labels[idx]
         label = torch.tensor(label, dtype=torch.long)
         
