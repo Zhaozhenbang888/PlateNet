@@ -74,6 +74,96 @@ class PlateDataset(BaseDataset):
         self.image_paths = []
         self.labels = []
         
+        # 检查是否使用分割文件夹结构
+        use_split_folders = self.config.get('use_split_folders', False)
+        
+        if use_split_folders:
+            self._load_data_from_split_folders(plate_dir)
+        else:
+            self._load_data_from_class_folders(plate_dir)
+        
+        # 检查是否有足够的数据
+        if len(self.image_paths) == 0:
+            mode = "训练" if self.is_training else "测试"
+            raise ValueError(f"没有找到{mode}数据。请确保数据目录结构正确。")
+        
+        # 打印数据集信息
+        if self.is_training or -1 not in self.labels:
+            # 训练集或有标签的测试集
+            self.logger.info(f"{'训练' if self.is_training else '测试'}集加载完成: "
+                  f"总共 {len(self.image_paths)} 张图片, "
+                  f"干净盘子: {self.labels.count(0)}, "
+                  f"脏盘子: {self.labels.count(1)}")
+        else:
+            # 无标签的测试集
+            self.logger.info(f"测试集加载完成: 总共 {len(self.image_paths)} 张图片（无标签）")
+    
+    def _load_data_from_split_folders(self, plate_dir: str) -> None:
+        """从分割文件夹结构加载数据 (train/val/test)
+        
+        Args:
+            plate_dir: 盘子数据集根目录
+        """
+        # 确定要加载的文件夹
+        if self.is_training:
+            # 训练时加载train文件夹
+            split_folder = 'train'
+        else:
+            # 测试时优先加载test文件夹，如果不存在则加载val文件夹
+            if os.path.exists(os.path.join(plate_dir, 'test')):
+                split_folder = 'test'
+            elif os.path.exists(os.path.join(plate_dir, 'val')):
+                split_folder = 'val'
+            else:
+                raise FileNotFoundError(f"在 {plate_dir} 中找不到 'test' 或 'val' 文件夹")
+        
+        split_dir = os.path.join(plate_dir, split_folder)
+        if not os.path.exists(split_dir):
+            raise FileNotFoundError(f"分割文件夹不存在: {split_dir}")
+        
+        # 如果是测试集，直接读取test文件夹下的所有图像文件（不需要分类子文件夹）
+        if not self.is_training and split_folder == 'test':
+            # 直接读取test文件夹下的所有图像文件
+            all_images = []
+            for fname in os.listdir(split_dir):
+                if fname.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    all_images.append(os.path.join(split_dir, fname))
+            
+            all_images.sort()
+            self.image_paths.extend(all_images)
+            # 测试集不需要真实标签，使用占位符标签（-1表示未知）
+            self.labels.extend([-1] * len(all_images))
+            
+            self.logger.info(f"从 {split_folder} 文件夹直接加载所有图像文件")
+            return
+        
+        # 训练集或验证集：按照分类子文件夹加载
+        # 加载干净盘子图像
+        clean_dir = os.path.join(split_dir, 'clean_dish')
+        if os.path.exists(clean_dir):
+            clean_images = [os.path.join(clean_dir, fname) for fname in os.listdir(clean_dir) 
+                            if fname.lower().endswith(('.png', '.jpg', '.jpeg'))]
+            clean_images.sort()
+            self.image_paths.extend(clean_images)
+            self.labels.extend([0] * len(clean_images))  # 干净盘子的标签为0
+        
+        # 加载脏盘子图像
+        dirty_dir = os.path.join(split_dir, 'dirty_dish')
+        if os.path.exists(dirty_dir):
+            dirty_images = [os.path.join(dirty_dir, fname) for fname in os.listdir(dirty_dir) 
+                           if fname.lower().endswith(('.png', '.jpg', '.jpeg'))]
+            dirty_images.sort()
+            self.image_paths.extend(dirty_images)
+            self.labels.extend([1] * len(dirty_images))  # 脏盘子的标签为1
+        
+        self.logger.info(f"从 {split_folder} 文件夹加载数据")
+    
+    def _load_data_from_class_folders(self, plate_dir: str) -> None:
+        """从类别文件夹结构加载数据 (原有的clean_dish/dirty_dish结构)
+        
+        Args:
+            plate_dir: 盘子数据集根目录
+        """
         # 设置训练/测试分割比例
         train_ratio = self.config.get('train_ratio', 0.8)
         
@@ -114,17 +204,6 @@ class PlateDataset(BaseDataset):
             
             self.image_paths.extend(selected_dirty)
             self.labels.extend([1] * len(selected_dirty))  # 脏盘子的标签为1
-        
-        # 检查是否有足够的数据
-        if len(self.image_paths) == 0:
-            mode = "训练" if self.is_training else "测试"
-            raise ValueError(f"没有找到{mode}数据。请确保数据目录结构正确。")
-        
-        # 打印数据集信息
-        self.logger.info(f"{'训练' if self.is_training else '测试'}集加载完成: "
-              f"总共 {len(self.image_paths)} 张图片, "
-              f"干净盘子: {self.labels.count(0)}, "
-              f"脏盘子: {self.labels.count(1)}")
     
     def __len__(self) -> int:
         """获取数据集长度
@@ -141,7 +220,7 @@ class PlateDataset(BaseDataset):
             idx: 索引
             
         Returns:
-            (图像, 标签) 的元组
+            (图像, 标签) 的元组，测试集无标签时标签为-1
         """
         # 读取图像
         img_path = self.image_paths[idx]
@@ -156,7 +235,7 @@ class PlateDataset(BaseDataset):
         if self.transform:
             image = self.transform(image)
         
-        # 获取标签
+        # 获取标签（测试集无标签时为-1）
         label = self.labels[idx]
         label = torch.tensor(label, dtype=torch.long)
         

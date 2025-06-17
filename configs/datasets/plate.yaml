@@ -4,7 +4,38 @@ dataset:
   batch_size: 32
   num_workers: 4
   shuffle: true
-  train_ratio: 0.8  # 训练集占总数据的比例
+  use_split_folders: true
+# 数据集文件夹结构说明：
+# 当 use_split_folders: true 时，期望的文件夹结构为：
+# data/plate/
+# ├── train/
+# │   ├── clean_dish/
+# │   │   ├── image1.jpg
+# │   │   └── image2.jpg
+# │   └── dirty_dish/
+# │       ├── image1.jpg
+# │       └── image2.jpg
+# ├── val/
+# │   ├── clean_dish/
+# │   └── dirty_dish/
+# └── test/
+#     ├── image1.jpg      
+#     ├── image2.jpg      
+#     └── ...
+#
+# 当 use_split_folders: false 或未设置时，使用原有结构：
+# data/plate/
+# ├── clean_dish/
+# │   ├── image1.jpg
+# │   └── image2.jpg
+# └── dirty_dish/
+#     ├── image1.jpg
+#     └── image2.jpg
+
+# 使用说明：
+# 1. 对于简单的训练/测试分割，使用 dataset 配置即可
+# 2. 对于需要明确控制训练/验证/测试数据集的情况，可以分别使用
+  train_ratio: 0.8  # 训练集占总数据的比例, 当use_split_folders: true时，train_ratio无效
   transforms:
     resize: [224, 224]  # 调整图像大小为224x224
     center_crop: 224    # 可选的中心裁剪
