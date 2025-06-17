@@ -1,7 +1,11 @@
-experiment_name: "plate_vgg16"  # 实验名称
-model_config: "configs/models/vgg16.yaml"  # 模型配置
+# MobileNet训练配置
+experiment_name: "plate_mobile"  # 实验名称
+model_config: "configs/models/mobilenet_v2.yaml"  # 模型配置 
 dataset_config: "configs/datasets/plate.yaml"  # 数据集配置
+# 基本训练设置
 
+seed: 42
+device: "cuda"
 # 系统配置
 seed: 42
 device: "cuda"

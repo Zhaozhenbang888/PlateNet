@@ -6,35 +6,34 @@ dataset_config: "configs/datasets/plate.yaml"  # 数据集配置
 seed: 42
 device: "cuda"
 
+# 系统配置
+seed: 42
+device: "cuda"
+
 # 训练配置
 training:
-  type: "base_trainer"
-  epochs: 100
-  eval_frequency: 1                  # 多少个epoch评估一次
-  save_frequency: 5                  # 多少个epoch保存一次
-  early_stopping_patience: 10        # 早停耐心值
-  gradient_accumulation_steps: 1     # 梯度累积步数
-  precision: "fp32"                  # 精度："fp32" 或 "fp16"
-  clip_grad_norm: 1.0                # 梯度裁剪
-  device: "cuda"
+  epochs: 50
+  val_interval: 1  # 验证频率：每N个epoch验证一次，默认为1（每个epoch都验证）
+  overfit_on_small_subset: 
+    enable: false
+    small_subset_size: 100
   optimizer:
-    type: "adam"
+    type: "adamw"
     lr: 1e-5
-    weight_decay: 1.0e-5
-    # beta1: 0.9
-    # beta2: 0.999
-  dataloader:
-    batch_size: 32
-    num_workers: 4
-    # shuffle: true
-    # pin_memory: true
-    # drop_last: false
-  checkpoint:
-    save_frequency: 5  # 每5个epoch保存一次权重
-  # 可视化配置
-  visualizer:
-    type: "tensorboard"
-    log_dir: "visualization"
+    weight_decay: 1e-5
+  scheduler:
+    type: CompositeLR
+    step_frequency: epoch
+    phases:
+      # 预热阶段
+      - scheduler_name: LinearWarmup
+        config:
+          warmup_epochs: 5
+          warmup_start_factor: 0.01
+        duration: 5
+      
+  # checkpoint:
+  #   save_frequency: 5  # 每5个epoch保存一次权重
 
 # 钩子配置
 hooks:
@@ -45,14 +44,14 @@ hooks:
 evaluation:
   val_evaluator:
     - type: Accuracy
-      top_k: [1, 5]  # 计算top-1和top-5准确率
+      top_k: [1]  # 计算top-1准确率
       prefix: "acc"
     - type: Precision
-      average: "macro"  # 宏平均，适合多分类任务
+      average: "binary"  # 宏平均，适合多分类任务
       prefix: "precision"
     - type: Recall
-      average: "macro"  # 宏平均，适合多分类任务
+      average: "binary"  # 宏平均，适合多分类任务
       prefix: "recall"
     - type: F1Score
-      average: "macro"  # 宏平均，适合多分类任务
+      average: "binary"  # 宏平均，适合多分类任务
       prefix: "f1"

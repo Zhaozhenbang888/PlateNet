@@ -1,0 +1,11 @@
+model:
+  type: "mobilenet_v2"
+  num_classes: 2  # 二分类
+  width_mult: 1.0  # 宽度乘数
+  input_size: 224  # 输入图像大小
+  dropout_rate: 0.2  # Dropout率
+  pretrained: true  # 使用预训练权重
+  freeze_backbone: false  # 是否冻结主干网络
+  loss:
+    type: "cross_entropy"  # 使用交叉熵损失
+    label_smoothing: 0.1  # 标签平滑

@@ -1,6 +1,6 @@
 dataset:
   type: "plate"
-  data_dir: "data/plate2"
+  data_dir: "data/plate"
   batch_size: 32
   num_workers: 4
   shuffle: true
