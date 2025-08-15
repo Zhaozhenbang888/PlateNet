@@ -1,0 +1,49 @@
+# ResNet152 盘子分类训练配置
+experiment_name: "plate_resnet152"  # 实验名称
+model_config: "configs/models/resnet152.yaml"  # 模型配置 
+dataset_config: "configs/datasets/plate.yaml"  # 数据集配置
+
+# 训练配置
+training:
+  epochs: 30  # 与原始实现一致
+  val_interval: 1  # 验证频率：每N个epoch验证一次
+  overfit_on_small_subset: 
+    enable: false
+    small_subset_size: 100
+  
+  optimizer:
+    type: "adam"  # 使用Adam优化器
+    lr: 0.001     # 学习率
+    weight_decay: 0.0  # 不使用权重衰减（原始实现没有）
+    amsgrad: true      # 使用AMSGrad变体
+  
+  scheduler:
+    type: StepLR       # 阶梯式学习率调度
+    step_size: 7       # 每7个epoch降低学习率
+    gamma: 0.1         # 学习率衰减因子
+    step_frequency: epoch
+    
+  # checkpoint:
+  #   save_frequency: 5  # 每5个epoch保存一次权重
+
+# 钩子配置
+hooks:
+  - type: "TimeTrackingHook"
+    name: "training_timer"
+    frequency: 1  # 每个epoch都要触发
+
+# 评估配置
+evaluation:
+  val_evaluator:
+    - type: Accuracy
+      top_k: [1]  # 计算top-1准确率
+      prefix: "acc"
+    - type: Precision
+      average: "binary"  # 二分类
+      prefix: "precision"
+    - type: Recall
+      average: "binary"  # 二分类
+      prefix: "recall"
+    - type: F1Score
+      average: "binary"  # 二分类
+      prefix: "f1" 

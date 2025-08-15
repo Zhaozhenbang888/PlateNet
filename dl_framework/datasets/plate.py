@@ -3,10 +3,13 @@ import torch
 from PIL import Image
 import torchvision.transforms as transforms
 from typing import Dict, Any, Tuple, Optional, List
+import cv2
+import numpy as np
 
 from .base_dataset import BaseDataset
 from .registry import DatasetRegistry
 from ..utils.logger import get_logger
+from .preprocessing import PlatePreprocessor
 
 @DatasetRegistry.register('plate')
 class PlateDataset(BaseDataset):
@@ -21,6 +24,12 @@ class PlateDataset(BaseDataset):
         """
         super().__init__(config, is_training)
         self.logger = get_logger(__name__)
+        
+        # 初始化预处理器
+        self.use_preprocessing = config.get('use_preprocessing', False)
+        if self.use_preprocessing:
+            self.preprocessor = PlatePreprocessor()
+            
         self.transform = self._get_transforms()
         self._load_data()
         
@@ -34,6 +43,18 @@ class PlateDataset(BaseDataset):
         
         transform_list = []
         
+        # 如果是训练集，添加高级数据增强
+        if self.is_training:
+            # 透视变换
+            if transform_config.get('random_perspective', {}).get('enable', False):
+                perspective_config = transform_config['random_perspective']
+                transform_list.append(transforms.RandomPerspective(
+                    distortion_scale=perspective_config.get('distortion_scale', 0.09),
+                    p=perspective_config.get('p', 0.75),
+                    interpolation=3,
+                    fill=255
+                ))
+        
         # 调整大小
         if 'resize' in transform_config:
             size = transform_config['resize']
@@ -44,13 +65,29 @@ class PlateDataset(BaseDataset):
             size = transform_config['center_crop']
             transform_list.append(transforms.CenterCrop(size))
         
-        # 如果是训练集，添加数据增强
+        # 如果是训练集，添加更多数据增强
         if self.is_training:
-            transform_list.extend([
-                transforms.RandomHorizontalFlip(),
-                transforms.RandomRotation(15),
-                transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.1)
-            ])
+            # 颜色抖动（更强的参数）
+            color_jitter_config = transform_config.get('color_jitter', {})
+            if color_jitter_config.get('enable', True):
+                hue_range = color_jitter_config.get('hue', (-0.5, 0.5))
+                transform_list.append(transforms.ColorJitter(
+                    brightness=color_jitter_config.get('brightness', 0.2),
+                    contrast=color_jitter_config.get('contrast', 0.2),
+                    saturation=color_jitter_config.get('saturation', 0.1),
+                    hue=hue_range
+                ))
+            
+            # 翻转
+            if transform_config.get('horizontal_flip', True):
+                transform_list.append(transforms.RandomHorizontalFlip())
+            if transform_config.get('vertical_flip', False):
+                transform_list.append(transforms.RandomVerticalFlip())
+                
+            # 旋转
+            rotation_degrees = transform_config.get('rotation', 15)
+            if rotation_degrees > 0:
+                transform_list.append(transforms.RandomRotation(rotation_degrees))
         
         # 转换为张量
         transform_list.append(transforms.ToTensor())
@@ -226,7 +263,21 @@ class PlateDataset(BaseDataset):
         # 读取图像
         img_path = self.image_paths[idx]
         try:
-            image = Image.open(img_path).convert('RGB')
+            if self.use_preprocessing:
+                # 使用OpenCV读取图像进行预处理
+                img_cv = cv2.imread(img_path)
+                if img_cv is None:
+                    raise ValueError(f"无法读取图像: {img_path}")
+                
+                # 应用预处理
+                processed_img = self.preprocessor.process_image(img_cv, self.is_training)
+                
+                # 转换为PIL图像
+                image = Image.fromarray(processed_img)
+            else:
+                # 常规PIL读取
+                image = Image.open(img_path).convert('RGB')
+                
         except Exception as e:
             self.logger.error(f"加载图像 {img_path} 时出错: {e}")
             # 如果出错，返回数据集中的另一个图像

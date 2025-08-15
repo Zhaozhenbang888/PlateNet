@@ -1,0 +1,16 @@
+# ResNet152 模型配置文件
+model:
+  type: "resnet152"
+  
+  # 基本参数
+  num_classes: 2           # 分类数量：干净/脏盘子
+  in_channels: 3           # 输入通道数，RGB 图像为 3
+  freeze_backbone: true    # 冻结主干网络，只训练最后一层
+  
+  # 预训练权重配置
+  pretrained: true         # 使用ImageNet预训练权重
+  weights: "IMAGENET1K_V2" # 使用最新的预训练权重
+  
+  # 训练配置
+  dropout: 0.0             # 不使用dropout（原始实现没有）
+  replace_stride_with_dilation: [false, false, false]  # 不使用空洞卷积 

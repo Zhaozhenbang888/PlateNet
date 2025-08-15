@@ -3,6 +3,7 @@ from .registry import DatasetRegistry
 from .cifar10 import CIFAR10Dataset
 from .cat_dog import CatDogDataset
 from .plate import PlateDataset
+from .augmented_plate import AugmentedPlateDataset
 
 __all__ = [
     'BaseDataset',
@@ -10,4 +11,5 @@ __all__ = [
     'CIFAR10Dataset',
     'CatDogDataset',
     'PlateDataset',
+    'AugmentedPlateDataset',
 ]

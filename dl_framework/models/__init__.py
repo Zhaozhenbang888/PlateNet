@@ -5,6 +5,7 @@ from .vgg16 import VGG16
 from .densenet import DenseNet
 from .vit_models import ImageViT
 from .googlenet import GoogleNet
+from .resnet152 import ResNet152
 
 __all__ = [
     'BaseModel',
@@ -14,4 +15,5 @@ __all__ = [
     'DenseNet',
     'ImageViT',
     'GoogleNet',
+    'ResNet152',
 ]
