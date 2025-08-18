@@ -49,8 +49,8 @@ class CosineAnnealingLRWrapper(BaseLRSchedulerWrapper):
         Returns:
             CosineAnnealingLR调度器
         """
-        T_max = self.config.get('T_max', 100)
-        eta_min = self.config.get('eta_min', 0)
+        T_max = int(self.config.get('T_max', 100))  # 强制转换为整数
+        eta_min = float(self.config.get('eta_min', 0))  # 强制转换为浮点数
         last_epoch = self.config.get('last_epoch', -1)
         
         return lr_scheduler.CosineAnnealingLR(

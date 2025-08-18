@@ -12,18 +12,24 @@ training:
     small_subset_size: 100
   optimizer:
     type: "adamw"
-    lr: 1e-5
+    lr: 5e-5  # 调整学习率以适应微调任务
     weight_decay: 1e-5
   scheduler:
     type: CompositeLR
     step_frequency: epoch
     phases:
-      # 预热阶段
+      # 阶段1: 线性预热
       - scheduler_name: LinearWarmup
         config:
           warmup_epochs: 5
           warmup_start_factor: 0.01
         duration: 5
+      # 阶段2: 余弦退火
+      - scheduler_name: CosineAnnealingLR
+        config:
+          T_max: 45  # 总 epochs (50) - 预热 epochs (5)
+          eta_min: 1e-7  # 最小学习率
+        duration: 45
       
   # checkpoint:
   #   save_frequency: 5  # 每5个epoch保存一次权重

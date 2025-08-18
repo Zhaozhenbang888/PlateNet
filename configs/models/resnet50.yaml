@@ -1,0 +1,18 @@
+# ResNet-50 Model Configuration
+
+model:
+  type: "resnet50"  # This should match the name registered in ModelRegistry
+  
+  # Number of classes for the final classification layer
+  num_classes: 2  # Example: 10 classes for CIFAR-10
+
+  # Whether to use pretrained weights from ImageNet
+  pretrained: True
+  
+  # Specify the pretrained weights version. 
+  # Options: 'IMAGENET1K_V1', 'IMAGENET1K_V2', 'DEFAULT', or None
+  weights: 'DEFAULT'
+  
+  # Whether to freeze the backbone layers (all layers except the final classifier)
+  # This is useful for transfer learning when you only want to train the classifier head.
+  freeze_backbone: False

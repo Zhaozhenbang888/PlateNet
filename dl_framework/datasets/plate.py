@@ -48,6 +48,7 @@ class PlateDataset(BaseDataset):
         if self.is_training:
             transform_list.extend([
                 transforms.RandomHorizontalFlip(),
+                transforms.RandomVerticalFlip(),
                 transforms.RandomRotation(15),
                 transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.1)
             ])
